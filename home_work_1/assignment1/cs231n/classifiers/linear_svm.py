@@ -25,7 +25,6 @@ def svm_loss_naive(W, X, y, reg):
   num_classes = W.shape[1]
   num_train = X.shape[0]
   loss = 0.0
-  count = 0
   for i in range(num_train):
     scores = X[i].dot(W)
     correct_class_score = scores[y[i]]
@@ -69,7 +68,7 @@ def svm_loss_vectorized(W, X, y, reg):
   loss = 0.0
   num_train = X.shape[0]
   dW = np.zeros(W.shape) # initialize the gradient as zero
-  index = np.arange(500)
+  index = np.arange(num_train)
   #############################################################################
   # TODO:                                                                     #
   # Implement a vectorized version of the structured SVM loss, storing the    #
