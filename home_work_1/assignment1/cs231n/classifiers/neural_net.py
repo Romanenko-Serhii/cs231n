@@ -3,6 +3,41 @@ from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 
+class MultiplyGate(object):
+    """docstring forMultiplyGate."""
+    #def __init__(self):
+        #(superMultiplyGate, self).__init__()
+        #self.arg = arg
+    def forward(self, x, y):
+        z = x.dot(y)
+        self.x = x
+        self.y = y
+        return z
+    def backward(self, dz):
+        dx = self.y * dz
+        dy = self.x * dz
+        return [dx,dy]
+
+class SummGate(object):
+    """docstring for SummGate."""
+    def forward(self, x, y):
+        z = x + y
+        return z
+    def backward(self, dz):
+        dx = dz
+        dy = dz
+        return [dx,dy]
+
+class MaxGate(object):
+    def forward(self, x, y):
+        x[x<y] = y
+        return x
+    def backward(self, dz):
+        return [dz,dz]
+
+
+
+
 class TwoLayerNet(object):
   """
   A two-layer fully-connected neural network. The net has an input dimension of
@@ -67,7 +102,7 @@ class TwoLayerNet(object):
     W1, b1 = self.params['W1'], self.params['b1']
     W2, b2 = self.params['W2'], self.params['b2']
     N, D = X.shape
-
+    index = np.arange(N)
     # Compute the forward pass
     scores = None
     #############################################################################
@@ -75,11 +110,15 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    h1_b = MultiplyGate().forward(X,W1)
+    h1_b = SummGate().forward(h1_b,b1)
+    h1 = np.maximum(0,h1_b)#MaxGate().forward(h1,0)
+    scores = MultiplyGate().forward(h1,W2)
+    scores = SummGate().forward(scores,b2)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
-    
+
     # If the targets are not given then jump out, we're done
     if y is None:
       return scores
@@ -92,7 +131,12 @@ class TwoLayerNet(object):
     # in the variable loss, which should be a scalar. Use the Softmax           #
     # classifier loss.                                                          #
     #############################################################################
-    pass
+    exp_scores = np.exp(scores)
+    exp_scores_sum = np.sum(exp_scores, axis=1)
+    exp_scores_sum = np.expand_dims(exp_scores_sum, axis = 1)
+    exp_scores_norm = exp_scores/exp_scores_sum
+    loss = np.sum(-np.log(exp_scores_norm[index,y])) / N
+    loss += reg * np.sum(W1 * W1) + reg * np.sum(W2 * W2)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -104,7 +148,22 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    dscores = exp_scores_norm.copy()
+    dscores[index,y] -= 1
+    dscores /= N
+    dW2 = h1.T.dot(dscores) + reg * W2
+
+    dh1 = h1_b.dot(dW2)
+    dh1[dh1>0] = 1
+    dh1[dh1<0] = 0
+    print(dh1)
+    # dW1 = 1
+    #
+    # grads["W1"] = dW1
+    grads["W2"] = dW2
+    grads["b1"] = np.sum(dh1 , axis = 0)
+    grads["b2"] = np.sum(dscores, axis = 0)
+    #print(dW1.shape, W1.shape)#, dh1.shape, h1.shape)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -214,5 +273,3 @@ class TwoLayerNet(object):
     ###########################################################################
 
     return y_pred
-
-
